@@ -26,6 +26,8 @@
   var appbarElement = querySelector('.app-bar');
   var menuBtn = querySelector('.menu');
   var main = querySelector('main');
+  var console = querySelector('#console');
+  var console2 = querySelector('#console2');
 
   function closeMenu() {
     body.classList.remove('open');
@@ -38,6 +40,31 @@
     appbarElement.classList.toggle('open');
     navdrawerContainer.classList.toggle('open');
     navdrawerContainer.classList.add('opened');
+  }
+
+  if (window.DeviceMotionEvent == undefined) {
+    //No accelerometer is present. Use buttons.
+    alert("no accelerometer");
+  }
+  else {
+    window.addEventListener("devicemotion", accelerometerUpdate, true);
+    window.addEventListener("deviceorientation", gyroscopeUpdate, true);
+  }
+  function accelerometerUpdate(e) {
+    var aX = event.accelerationIncludingGravity.x*1;
+    var aY = event.accelerationIncludingGravity.y*1;
+    var aZ = event.accelerationIncludingGravity.z*1;
+    var gyro = {};
+    gyro.x = event.rotationRate.alpha;
+    gyro.y = event.rotationRate.beta;
+    gyro.z = event.rotationRate.gamma;
+
+    var t = event.timeStamp;
+
+    console.innerHTML = ''+gyro.x +"<br>"+gyro.y+"<br>"+gyro.z;
+  }
+  function gyroscopeUpdate(event) {
+    console2.textContent = Object.keys(event).join(" ")
   }
 
   main.addEventListener('click', closeMenu);
