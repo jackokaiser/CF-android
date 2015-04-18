@@ -28,6 +28,7 @@
   var main = querySelector('main');
   var console = querySelector('#console');
   var console2 = querySelector('#console2');
+  var localVideo = querySelector('#local-video');
 
   function closeMenu() {
     body.classList.remove('open');
@@ -66,6 +67,42 @@
   function gyroscopeUpdate(event) {
     console2.textContent = Object.keys(event).join(" ")
   }
+
+  var localStream = null;
+  // get the local video and audio stream and show preview in the
+  // "LOCAL" video element
+  // successCb: has the signature successCb(stream); receives
+  // the local video stream as an argument
+  var getLocalStream = function (successCb) {
+    if (localStream && successCb) {
+      successCb(localStream);
+    }
+    else {
+      navigator.webkitGetUserMedia(
+        {
+          video: true
+        },
+        function (stream) {
+          localStream = stream;
+
+          localVideo.src = window.URL.createObjectURL(stream);
+
+          if (successCb) {
+            successCb(stream);
+          }
+        },
+
+        function (err) {
+          logError('failed to access local camera');
+          logError(err.message);
+        }
+      );
+    }
+  };
+  getLocalStream(function (stream) {
+      logMessage('outgoing call initiated');
+
+  });
 
   main.addEventListener('click', closeMenu);
   menuBtn.addEventListener('click', toggleMenu);
