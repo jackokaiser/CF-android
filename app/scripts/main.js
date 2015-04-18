@@ -26,7 +26,6 @@
   var logger1 = querySelector('#logger1');
   var logger2 = querySelector('#logger2');
   var localVideo = querySelector('#local-video');
-  var videoSelect = querySelector('select#videoSource');
   var videoSource = null;
 
   if (window.DeviceMotionEvent == undefined) {
@@ -92,16 +91,6 @@
       var sourceInfo = sourceInfos[i];
       if (videoSource === null || sourceInfo.facing.indexOf("environment") > -1 ) {
         videoSource = sourceInfo.id;
-        logger2.textContent = ""+i;
-      }
-      var option = document.createElement('option');
-      option.value = sourceInfo.id;
-      if (sourceInfo.kind === 'audio') {
-      } else if (sourceInfo.kind === 'video') {
-        option.text = sourceInfo.label || 'camera ' + sourceInfo.facing;
-        videoSelect.appendChild(option);
-      } else {
-        console.log('Some other kind of source: ', sourceInfo);
       }
     }
     getLocalStream();
