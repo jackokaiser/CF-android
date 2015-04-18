@@ -21,27 +21,13 @@
 
   var querySelector = document.querySelector.bind(document);
 
-  var navdrawerContainer = querySelector('.navdrawer-container');
   var body = document.body;
-  var appbarElement = querySelector('.app-bar');
-  var menuBtn = querySelector('.menu');
   var main = querySelector('main');
-  var console = querySelector('#console');
-  var console2 = querySelector('#console2');
+  var logger1 = querySelector('#logger1');
+  var logger2 = querySelector('#logger2');
   var localVideo = querySelector('#local-video');
-
-  function closeMenu() {
-    body.classList.remove('open');
-    appbarElement.classList.remove('open');
-    navdrawerContainer.classList.remove('open');
-  }
-
-  function toggleMenu() {
-    body.classList.toggle('open');
-    appbarElement.classList.toggle('open');
-    navdrawerContainer.classList.toggle('open');
-    navdrawerContainer.classList.add('opened');
-  }
+  var videoSelect = querySelector('select#videoSource');
+  var videoSource = null;
 
   if (window.DeviceMotionEvent == undefined) {
     //No accelerometer is present. Use buttons.
@@ -62,10 +48,9 @@
 
     var t = event.timeStamp;
 
-    console.innerHTML = ''+gyro.x +"<br>"+gyro.y+"<br>"+gyro.z;
+    logger1.innerHTML = ''+gyro.x +"<br>"+gyro.y+"<br>"+gyro.z;
   }
   function gyroscopeUpdate(event) {
-    console2.textContent = Object.keys(event).join(" ")
   }
 
   var localStream = null;
@@ -80,7 +65,9 @@
     else {
       navigator.webkitGetUserMedia(
         {
-          video: true
+          video: {
+            optional: [{sourceId: videoSource}]
+          }
         },
         function (stream) {
           localStream = stream;
@@ -99,16 +86,31 @@
       );
     }
   };
-  getLocalStream(function (stream) {
-      logMessage('outgoing call initiated');
 
-  });
-
-  main.addEventListener('click', closeMenu);
-  menuBtn.addEventListener('click', toggleMenu);
-  navdrawerContainer.addEventListener('click', function (event) {
-    if (event.target.nodeName === 'A' || event.target.nodeName === 'LI') {
-      closeMenu();
+  function gotSources(sourceInfos) {
+    for (var i = 0; i !== sourceInfos.length; ++i) {
+      var sourceInfo = sourceInfos[i];
+      if (videoSource === null || sourceInfo.facing.indexOf("environment") > -1 ) {
+        videoSource = sourceInfo.id;
+        logger2.textContent = ""+i;
+      }
+      var option = document.createElement('option');
+      option.value = sourceInfo.id;
+      if (sourceInfo.kind === 'audio') {
+      } else if (sourceInfo.kind === 'video') {
+        option.text = sourceInfo.label || 'camera ' + sourceInfo.facing;
+        videoSelect.appendChild(option);
+      } else {
+        console.log('Some other kind of source: ', sourceInfo);
+      }
     }
-  });
+    getLocalStream();
+  }
+
+  if (typeof MediaStreamTrack === 'undefined'){
+    alert('This browser does not support MediaStreamTrack.\n\nTry Chrome Canary.');
+  } else {
+    MediaStreamTrack.getSources(gotSources);
+  }
+
 })();

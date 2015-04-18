@@ -22,6 +22,7 @@
 // Include Gulp & tools we'll use
 var gulp = require('gulp');
 var $ = require('gulp-load-plugins')();
+var shell = require('gulp-shell');
 var del = require('del');
 var runSequence = require('run-sequence');
 var browserSync = require('browser-sync');
@@ -160,6 +161,11 @@ gulp.task('serve', ['styles'], function () {
   gulp.watch(['app/images/**/*'], reload);
 });
 
+gulp.task('apk', ['default'], shell.task([
+  'python  ~/sdk/crosswalk-11.40.277.7/make_apk.py --arch=arm --package=org.crosswalkproject.example --manifest=./dist/manifest.json'
+]));
+
+
 // Build and serve the output from the dist build
 gulp.task('serve:dist', ['default'], function () {
   browserSync({
@@ -175,7 +181,7 @@ gulp.task('serve:dist', ['default'], function () {
 
 // Build production files, the default task
 gulp.task('default', ['clean'], function (cb) {
-  runSequence('styles', ['jshint', 'html', 'images', 'fonts', 'copy'], cb);
+  runSequence('styles', [ 'html', 'images', 'fonts', 'copy'], cb);
 });
 
 // Run PageSpeed Insights
