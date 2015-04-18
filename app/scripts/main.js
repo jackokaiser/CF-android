@@ -23,9 +23,9 @@
 
   var body = document.body;
   var main = querySelector('main');
-  var logger1 = querySelector('#logger1');
-  var logger2 = querySelector('#logger2');
   var localVideo = querySelector('#local-video');
+  var canvas = querySelector('#canvas');
+
   var videoSource = null;
 
   if (window.DeviceMotionEvent == undefined) {
@@ -33,23 +33,7 @@
     alert("no accelerometer");
   }
   else {
-    window.addEventListener("devicemotion", accelerometerUpdate, true);
-    window.addEventListener("deviceorientation", gyroscopeUpdate, true);
-  }
-  function accelerometerUpdate(e) {
-    var aX = event.accelerationIncludingGravity.x*1;
-    var aY = event.accelerationIncludingGravity.y*1;
-    var aZ = event.accelerationIncludingGravity.z*1;
-    var gyro = {};
-    gyro.x = event.rotationRate.alpha;
-    gyro.y = event.rotationRate.beta;
-    gyro.z = event.rotationRate.gamma;
-
-    var t = event.timeStamp;
-
-    logger1.innerHTML = ''+gyro.x +"<br>"+gyro.y+"<br>"+gyro.z;
-  }
-  function gyroscopeUpdate(event) {
+    window.addEventListener("devicemotion", closedForm.onImu, true);
   }
 
   var localStream = null;
@@ -94,6 +78,10 @@
       }
     }
     getLocalStream();
+
+    closedForm.init(640, 480);
+    requestAnimationFrame(closedForm.onObservation);
+
   }
 
   if (typeof MediaStreamTrack === 'undefined'){
@@ -101,5 +89,11 @@
   } else {
     MediaStreamTrack.getSources(gotSources);
   }
+
+  window.unload = function() {
+    localVideo.pause();
+    localVideo.src=null;
+  };
+
 
 })();
