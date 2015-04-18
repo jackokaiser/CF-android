@@ -5,3 +5,4 @@ www
 platforms
 plugins
 app/bower_components
+*.apk
