@@ -1,0 +1,25 @@
+{
+  "name": "closed-form-absolute-scale",
+  "version": "0.0.0",
+  "homepage": "https://github.com/jackokaiser/CF-android",
+  "authors": [
+    "Jacques KAISER <jackokaiser@gmail.com>"
+  ],
+  "keywords": [
+    "vision",
+    "robotics",
+    "closed",
+    "form"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jsfeat": "*"
+  }
+}
