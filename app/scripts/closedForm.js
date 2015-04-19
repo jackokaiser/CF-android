@@ -176,9 +176,15 @@
       numeric.setBlockOffset(leftHandSide,[rowIdx, 6],[ nFeatures*3, nFeatures], mu1);
     }
     var svd = numeric.svd(leftHandSide);
-    // var X = numeric.solveQP(leftHandSide, [rightHandSide]);
+    svd.S.forEach(function(e, idx) {
+      svd.S[idx] = 1./e;
+    });
 
-    return {};
+    var X = numeric.dot(svd.V,
+                        numeric.mul(numeric.dot(numeric.transpose(svd.U), rightHandSide),
+                                    svd.S));
+
+    return X;
   }
 
   function matchCorners (previousObs, corners, count, currentTime) {
