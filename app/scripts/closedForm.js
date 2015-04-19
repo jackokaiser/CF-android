@@ -52,8 +52,11 @@
       var imageData = ctx.getImageData(0, 0, width, height);
       jsfeat.imgproc.grayscale(imageData.data, width, height, img_u8, jsfeat.COLOR_RGBA2GRAY);
       var count = jsfeat.fast_corners.detect(img_u8, corners, 5);
-      // render result back to canvas
-      var data_u32 = new Uint32Array(imageData.data.buffer);
+
+      if (!count) {
+        allObs = [];
+        return;
+      }
 
       if (allObs.length === 0) {
         // initial obs: push all image ref
@@ -68,8 +71,7 @@
         matchCorners(allObs, corners, count);
       }
 
-      render_corners(corners, count, data_u32, width);
-      ctx.putImageData(imageData, 0, 0);
+      render_corners(ctx, allObs);
     }
   }
 
@@ -82,8 +84,7 @@
     for(var i=0; i < lastCorners.length; ++i)
     {
       var curCorner = lastCorners[i];
-      var closeCorners = findCloseCorners(curCorner, corners, size);
-      var bestMatch = closestScore(curCorner, closeCorners, minimumDist);
+      var bestMatch = findClosestCorner(curCorner, corners, size);
       if (bestMatch) {
         matchedIndexes.push(true);
         newObs.push(bestMatch);
@@ -102,19 +103,16 @@
     previousObs.push(newObs);
   };
 
-  function findCloseCorners(target, corners, dist) {
+  function findClosestCorner(target, corners, dist) {
     var halfDist = dist/2.;
-    return corners.filter(function(c) {
-      return c.x - halfDist < target.x && c.x + halfDist > target.x &&
-        c.y - halfDist < target.y && c.y + halfDist > target.y
-    });
-  };
-  function closestScore(target, corners, distLimit) {
     var minDist = Infinity;
     var minIdx = null;
+
     corners.forEach(function(c, idx) {
-      var curDist = Math.abs(c.score - target.score);
-      if (curDist < distLimit) {
+      if (c.x - halfDist < target.x && c.x + halfDist > target.x &&
+          c.y - halfDist < target.y && c.y + halfDist > target.y) {
+        // is in the patch
+        var curDist = Math.pow(c.x - target.x,2) + Math.pow(c.y - target.y,2);
         if (curDist < minDist) {
           minDist = curDist;
           minIdx = idx;
@@ -128,18 +126,24 @@
       return null;
     }
   };
-  function render_corners(corners, count, img, step) {
+
+  function render_corners(ctx, allObs) {
+    if (!allObs.length || !allObs[0].length) {
+      return;
+    }
+
     var pix = (0xff << 24) | (0x00 << 16) | (0xff << 8) | 0x00;
-    for(var i=0; i < count; ++i)
-    {
-      var x = corners[i].x;
-      var y = corners[i].y;
-      var off = (x + y * step);
-      img[off] = pix;
-      img[off-1] = pix;
-      img[off+1] = pix;
-      img[off-step] = pix;
-      img[off+step] = pix;
+    var nFeatures = allObs[0].length;
+    for (var iFt=0;iFt<nFeatures; iFt++) {
+      ctx.beginPath();
+      var curImRef = allObs[0][iFt];
+      ctx.moveTo(curImRef.x, curImRef.y);
+
+      for (var iObs=0; iObs < allObs.length; iObs++) {
+        curImRef = allObs[iObs][iFt];
+        ctx.lineTo(curImRef.x, curImRef.y);
+      }
+      // ctx.stroke();
     }
   };
 
