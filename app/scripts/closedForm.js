@@ -7,6 +7,7 @@
   var logger2 = querySelector('#logger2');
   var video = querySelector('#local-video');
   var canvas = querySelector('#canvas');
+  var minNbFeatures = 3;
 
   var ImuMeasurements = function (imu) {
     this.acc = [
@@ -41,7 +42,7 @@
     while(--i >= 0) {
       corners[i] = new jsfeat.keypoint_t(0,0,0,0);
     }
-    jsfeat.fast_corners.set_threshold(50);
+    jsfeat.fast_corners.set_threshold(40);
   }
 
 
@@ -63,7 +64,7 @@
         var newObs = [];
         for(var i=0; i < count; ++i)
         {
-          newObs.push(corners[i]);
+          newObs.push(corners[i].clone());
         }
         allObs.push(newObs);
       }
@@ -78,37 +79,43 @@
   function matchCorners (previousObs, corners, count) {
     var lastCorners = previousObs[previousObs.length - 1];
     var minimumDist = 3;
-    var matchedIndexes = [];
+    var idxMatched = [];
     var newObs = [];
     var size = 11;
-    for(var i=0; i < lastCorners.length; ++i)
-    {
-      var curCorner = lastCorners[i];
-      var bestMatch = findClosestCorner(curCorner, corners, size);
+
+    lastCorners.forEach(function(c, idx) {
+      var bestMatch = findClosestCorner(c, corners, count, size);
       if (bestMatch) {
-        matchedIndexes.push(true);
-        newObs.push(bestMatch);
+        newObs.push(bestMatch.clone());
+        idxMatched.push(true);
       }
       else {
-        matchedIndexes.push(false);
+        idxMatched.push(false);
       }
-    }
+    });
+
     // remove trails that didn't get a new match
-    previousObs.forEach(function(obs) {
-      obs = obs.filter(function(corner, idx) {
-        return matchedIndexes[idx];
+    previousObs.forEach(function(obs, obsIdx) {
+      previousObs[obsIdx] = obs.filter(function(corner, idx) {
+        return idxMatched[idx];
       });
     });
 
-    previousObs.push(newObs);
+    if (!newObs.length || newObs.length < minNbFeatures) {
+      // remove all obs
+      previousObs.splice(0, previousObs.length);
+    }
+    else {
+      previousObs.push(newObs);
+    }
   };
 
-  function findClosestCorner(target, corners, dist) {
+  function findClosestCorner(target, corners, count, dist) {
     var halfDist = dist/2.;
     var minDist = Infinity;
     var minIdx = null;
-
-    corners.forEach(function(c, idx) {
+    for (var idx=0; idx < count; idx++) {
+      var c = corners[idx];
       if (c.x - halfDist < target.x && c.x + halfDist > target.x &&
           c.y - halfDist < target.y && c.y + halfDist > target.y) {
         // is in the patch
@@ -118,7 +125,8 @@
           minIdx = idx;
         }
       }
-    });
+    }
+
     if (minIdx) {
       return corners[minIdx];
     }
@@ -139,11 +147,11 @@
       var curImRef = allObs[0][iFt];
       ctx.moveTo(curImRef.x, curImRef.y);
 
-      for (var iObs=0; iObs < allObs.length; iObs++) {
+      for (var iObs=1; iObs < allObs.length; iObs++) {
         curImRef = allObs[iObs][iFt];
         ctx.lineTo(curImRef.x, curImRef.y);
       }
-      // ctx.stroke();
+      ctx.stroke();
     }
   };
 
