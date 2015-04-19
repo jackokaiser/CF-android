@@ -35,6 +35,17 @@ body.open {
   overflow: hidden;
 }
 
+#logger1,
+#logger2 {
+  position: absolute;
+}
+#logger1 {
+  left: 5px;
+}
+#logger1 {
+  right: 5px;
+}
+
 .app-bar {
   display: block;
   width: 100%;
