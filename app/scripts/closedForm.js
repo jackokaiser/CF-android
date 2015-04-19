@@ -8,6 +8,7 @@
   var video = querySelector('#local-video');
   var canvas = querySelector('#canvas');
   var minNbFeatures = 3;
+  var initialTime;
 
   var ImuMeasurements = function (imu) {
     this.acc = [
@@ -47,7 +48,6 @@
 
 
   closedForm.onObservation = function() {
-    var initialTime = null;
 
     requestAnimationFrame(closedForm.onObservation);
     if (video.readyState === video.HAVE_ENOUGH_DATA) {
@@ -80,6 +80,7 @@
       if (!allObs.length) {
         return;
       }
+      render_corners(ctx, allObs);
 
       var elapsedTime = (currentTime - initialTime) / 1000.;
       if (elapsedTime >= 3.0) {
@@ -87,8 +88,10 @@
         syncImuTime(allImu, opticalRays.initialTimestamp);
 
         var solution = computeClosedForm(opticalRays, allImu);
+
+        allObs = [];
+        allImu = [];
       }
-      render_corners(ctx, allObs);
     }
   }
 
@@ -98,7 +101,7 @@
 
     allObs.forEach(function(obs) {
       var newObs = [];
-      newObs.t = obs.t - ret.initialTimestamp;
+      newObs.t = (obs.t - ret.initialTimestamp) / 1000.;
       obs.forEach(function(ft) {
         newObs.push(unproject(ft));
       });
@@ -114,11 +117,66 @@
 
   function syncImuTime (imu, initialTime) {
     imu.forEach(function(tick) {
-      tick.t = tick.t - initialTime;
+      tick.t = (tick.t - initialTime)/1000.;
     });
   }
 
   function computeClosedForm(rays, imu) {
+    // var nFeatures = rays[0].length;
+    var nFeatures = 3;
+    var nObs = rays.length;
+
+    var nEquations = 3*(nObs - 1)*nFeatures;
+    var nUnknowns = nFeatures * nObs + 6;
+
+
+    var leftHandSide = numeric.rep([nEquations, nUnknowns], 0);
+    var rightHandSide = numeric.rep([nEquations], 0);
+
+    var mu1 = numeric.rep([nFeatures*3, nFeatures], 0);
+    // build mu1 matrix with all first measurements
+    for (var iFeature = 0; iFeature < nFeatures; iFeature++) {
+      var ray = rays[0][iFeature];
+      var from = [iFeature*3, iFeature];
+      numeric.setBlockOffset(mu1,from, [3, 1], numeric.toRow(ray));
+    }
+
+    // for (var iObs = 1; iObs < nObs; iObs++) {
+    //   var obs = rays[iObs];
+    //   var tj = obs.t;
+
+    //   integrateImuUpToTime(initialTime, tj, imuMsgs, rotationGyro, CAv, tCAv);
+    //   var rowIdx = 3 * nFeatures * (iObs - 1);
+    //   var colIdx = 6 + nFeatures * iObs;
+
+    //   /////// Tj submatrix
+    //   Tj = Identity * -.5 * tj * tj;
+    //   /////// Sj submatrix
+    //   Sj = Identity * -tj;
+
+    //   /////// Sv (b vector)
+    //   bv = tj * CAv - tCAv;
+
+    //   for (int iFeature = 0; iFeature < nFeatures; iFeature++)
+    //   {
+    //     A.slice(rowIdx + iFeature*3, 0, 3, 3) = Tj;
+    //     A.slice(rowIdx + iFeature*3, 3, 3, 3) = Sj;
+    //     b.slice(rowIdx + iFeature*3, 3) = bv;
+    //   }
+
+
+    //   // first feature observation (mu1)
+    //   A.slice(rowIdx, 6, nFeatures*3, nFeatures) = mu1;
+
+    //   // current feature observation (muj)
+    //   list<Vector<3> >::iterator bearIt = opticalRays[iObs].begin();
+    //   // for all features at this observation
+    //   for (int iFeature = 0; iFeature < nFeatures; iFeature++, bearIt++)
+    //   {
+    //     // JACK: possible speedup, put all features in a matrix [f1 f2 ... fn] and rotate them all at once
+    //     A.slice(rowIdx + iFeature*3, colIdx + iFeature, 3, 1) = -(rotationGyro * (*bearIt).as_col());
+    //   }
+    // }
     return {};
   }
 
