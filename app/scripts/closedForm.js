@@ -123,12 +123,15 @@
 
   function computeClosedForm(rays, imu) {
     // var nFeatures = rays[0].length;
+    // var nObs = rays.length;
     var nFeatures = 3;
-    var nObs = rays.length;
+    var nObs = 3;
+
 
     var nEquations = 3*(nObs - 1)*nFeatures;
     var nUnknowns = nFeatures * nObs + 6;
 
+    var Tj, Sj, bv;
 
     var leftHandSide = numeric.rep([nEquations, nUnknowns], 0);
     var rightHandSide = numeric.rep([nEquations], 0);
@@ -141,42 +144,40 @@
       numeric.setBlockOffset(mu1,from, [3, 1], numeric.toRow(ray));
     }
 
-    // for (var iObs = 1; iObs < nObs; iObs++) {
-    //   var obs = rays[iObs];
-    //   var tj = obs.t;
+    for (var iObs = 1; iObs < nObs; iObs++) {
+      var obs = rays[iObs];
+      var tj = obs.t;
 
     //   integrateImuUpToTime(initialTime, tj, imuMsgs, rotationGyro, CAv, tCAv);
-    //   var rowIdx = 3 * nFeatures * (iObs - 1);
-    //   var colIdx = 6 + nFeatures * iObs;
+      var rowIdx = 3 * nFeatures * (iObs - 1);
+      var colIdx = 6 + nFeatures * iObs;
 
-    //   /////// Tj submatrix
-    //   Tj = Identity * -.5 * tj * tj;
-    //   /////// Sj submatrix
-    //   Sj = Identity * -tj;
+      /////// Tj submatrix
+      Tj = numeric.mul(numeric.mul(numeric.mul(numeric.identity(3), -.5), tj), tj);
+      /////// Sj submatrix
+      Sj = numeric.mul(numeric.identity(3),-tj);
 
     //   /////// Sv (b vector)
-    //   bv = tj * CAv - tCAv;
+      // bv = tj * CAv - tCAv;
 
-    //   for (int iFeature = 0; iFeature < nFeatures; iFeature++)
-    //   {
-    //     A.slice(rowIdx + iFeature*3, 0, 3, 3) = Tj;
-    //     A.slice(rowIdx + iFeature*3, 3, 3, 3) = Sj;
-    //     b.slice(rowIdx + iFeature*3, 3) = bv;
-    //   }
+      for (iFeature = 0; iFeature < nFeatures; iFeature++)
+      {
+        numeric.setBlockOffset(leftHandSide, [rowIdx + iFeature*3, 0], [3, 3], Tj);
+        numeric.setBlockOffset(leftHandSide, [rowIdx + iFeature*3, 3], [3, 3], Sj);
+        // b.slice(rowIdx + iFeature*3, 3) = bv;
+
+        numeric.setBlockOffset(leftHandSide, [rowIdx + iFeature*3, colIdx + iFeature], [3, 1],
+                               // -(rotationGyro * (*bearIt).as_col());
+                               numeric.toRow(obs[iFeature]));
+      }
 
 
-    //   // first feature observation (mu1)
-    //   A.slice(rowIdx, 6, nFeatures*3, nFeatures) = mu1;
+      // first feature observation (mu1)
+      numeric.setBlockOffset(leftHandSide,[rowIdx, 6],[ nFeatures*3, nFeatures], mu1);
+    }
+    var svd = numeric.svd(leftHandSide);
+    // var X = numeric.solveQP(leftHandSide, [rightHandSide]);
 
-    //   // current feature observation (muj)
-    //   list<Vector<3> >::iterator bearIt = opticalRays[iObs].begin();
-    //   // for all features at this observation
-    //   for (int iFeature = 0; iFeature < nFeatures; iFeature++, bearIt++)
-    //   {
-    //     // JACK: possible speedup, put all features in a matrix [f1 f2 ... fn] and rotate them all at once
-    //     A.slice(rowIdx + iFeature*3, colIdx + iFeature, 3, 1) = -(rotationGyro * (*bearIt).as_col());
-    //   }
-    // }
     return {};
   }
 
@@ -204,6 +205,7 @@
       previousObs[obsIdx] = obs.filter(function(corner, idx) {
         return idxMatched[idx];
       });
+      previousObs[obsIdx].t = obs.t;
     });
 
     if (!newObs.length || newObs.length < minNbFeatures) {
