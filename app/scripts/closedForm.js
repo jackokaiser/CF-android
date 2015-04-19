@@ -47,8 +47,11 @@
 
 
   closedForm.onObservation = function() {
+    var initialTime = null;
+
     requestAnimationFrame(closedForm.onObservation);
     if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      var currentTime = new Date();
       ctx.drawImage(video, 0, 0, width, height);
       var imageData = ctx.getImageData(0, 0, width, height);
       jsfeat.imgproc.grayscale(imageData.data, width, height, img_u8, jsfeat.COLOR_RGBA2GRAY);
@@ -58,10 +61,11 @@
         allObs = [];
         return;
       }
-
       if (allObs.length === 0) {
         // initial obs: push all image ref
+        initialTime = new Date();
         var newObs = [];
+        newObs.t = initialTime;
         for(var i=0; i < count; ++i)
         {
           newObs.push(corners[i].clone());
@@ -69,18 +73,61 @@
         allObs.push(newObs);
       }
       else {
-        matchCorners(allObs, corners, count);
+        // remove non matched image corners, add the matched ones
+        matchCorners(allObs, corners, count, currentTime);
       }
 
+      if (!allObs.length) {
+        return;
+      }
+
+      var elapsedTime = (currentTime - initialTime) / 1000.;
+      if (elapsedTime >= 3.0) {
+        var opticalRays = unprojectObs(allObs);
+        syncImuTime(allImu, opticalRays.initialTimestamp);
+
+        var solution = computeClosedForm(opticalRays, allImu);
+      }
       render_corners(ctx, allObs);
     }
   }
 
-  function matchCorners (previousObs, corners, count) {
+  function unprojectObs(allObs) {
+    var ret = [];
+    ret.initialTimestamp = allObs[0].t;
+
+    allObs.forEach(function(obs) {
+      var newObs = [];
+      newObs.t = obs.t - ret.initialTimestamp;
+      obs.forEach(function(ft) {
+        newObs.push(unproject(ft));
+      });
+      ret.push(newObs);
+    });
+    return ret;
+  }
+
+  function unproject (ft) {
+    var norm = ft.x + ft.y + 1;
+    return [ ft.x / norm , ft.y / norm , 1 / norm ];
+  }
+
+  function syncImuTime (imu, initialTime) {
+    imu.forEach(function(tick) {
+      tick.t = tick.t - initialTime;
+    });
+  }
+
+  function computeClosedForm(rays, imu) {
+    return {};
+  }
+
+  function matchCorners (previousObs, corners, count, currentTime) {
     var lastCorners = previousObs[previousObs.length - 1];
     var minimumDist = 3;
     var idxMatched = [];
     var newObs = [];
+    newObs.t = currentTime;
     var size = 11;
 
     lastCorners.forEach(function(c, idx) {
