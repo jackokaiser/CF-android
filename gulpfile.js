@@ -161,7 +161,7 @@ gulp.task('serve', ['styles'], function () {
 });
 
 gulp.task('apk', ['default'], shell.task([
-  'python  ~/sdk/crosswalk-11.40.277.7/make_apk.py --arch=arm --package=org.crosswalkproject.example --manifest=./dist/manifest.json'
+  'python  ~/sdk/crosswalk-11.40.277.7/make_apk.py --arch=arm --enable-remote-debugging --package=org.crosswalkproject.example --manifest=./dist/manifest.json'
 ]));
 
 

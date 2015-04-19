@@ -32,19 +32,15 @@
   </head>
   <body>
     <main>
-      <div id="logger1">Console</div>
-      <div id="logger2">Console2</div>
-
-      <video id="local-video" autoplay width="640" height="480"></video>
-      <!-- <video id="local-video" autoplay width="640" height="480" style="display:none;"></video> -->
-      <canvas id="canvas" width="640" height="480"></canvas>
+      <video id="local-video" autoplay width="640" height="360" style="display:none;"></video>
+      <canvas id="canvas" width="640" height="360"></canvas>
 
     </main>
 
+    <!-- build:js scripts/main.min.js -->
     <script src="scripts/bower_components/jsfeat/build/jsfeat-min.js"></script>
     <script src="scripts/bower_components/numericjs/src/numeric.js"></script>
     <script src="scripts/bower_components/numericjs/src/svd.js"></script>
-    <!-- build:js scripts/main.min.js -->
     <script src="scripts/libUtils.js"></script>
     <script src="scripts/closedForm.js"></script>
     <script src="scripts/main.js"></script>
