@@ -1,0 +1,21 @@
+{
+  "name": "jsfeat",
+  "description": "JavaScript Computer Vision library",
+  "author": "Eugene Zatepyakin (http://www.inspirit.ru/)",
+  "ignore": [
+    "src",
+    "compile",
+    "node_modules"
+  ],
+  "homepage": "https://github.com/inspirit/jsfeat",
+  "_release": "9d74f25f23",
+  "_resolution": {
+    "type": "branch",
+    "branch": "master",
+    "commit": "9d74f25f23b1f5e8901a4c3ade5fd1199b6b34e7"
+  },
+  "_source": "git://github.com/inspirit/jsfeat.git",
+  "_target": "*",
+  "_originalSource": "jsfeat",
+  "_direct": true
+}

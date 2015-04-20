@@ -4,5 +4,4 @@ www
 .tmp
 platforms
 plugins
-app/scripts/bower_components
 *.apk
