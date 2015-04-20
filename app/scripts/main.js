@@ -18,6 +18,9 @@
  */
 (function () {
   'use strict';
+  var TARGET_HEIGHT = 360;
+  var TARGET_WIDTH = TARGET_HEIGHT * 16 / 9;
+  // var TARGET_HEIGHT = 720;
 
   var querySelector = document.querySelector.bind(document);
 
@@ -25,6 +28,7 @@
   var main = querySelector('main');
   var localVideo = querySelector('#local-video');
   var canvas = querySelector('#canvas');
+  var logger1 = querySelector('#logger1');
 
   var videoSource = null;
 
@@ -49,7 +53,12 @@
       navigator.webkitGetUserMedia(
         {
           video: {
-            optional: [{sourceId: videoSource}]
+            optional: [{sourceId: videoSource},
+                       {minHeight: TARGET_HEIGHT},
+                       {minWidth: TARGET_WIDTH},
+                       {maxHeight: TARGET_HEIGHT},
+                       {maxWidth: TARGET_WIDTH}
+                      ]
           }
         },
         function (stream) {
@@ -63,8 +72,8 @@
         },
 
         function (err) {
-          logError('failed to access local camera');
-          logError(err.message);
+          console.error('failed to access local camera');
+          console.error(err.message);
         }
       );
     }
@@ -78,11 +87,13 @@
       }
     }
     getLocalStream();
-
-    closedForm.init(640, 480);
-    requestAnimationFrame(closedForm.onObservation);
-
   }
+
+  localVideo.addEventListener("play", function(){
+    logger1.textContent = "" + localVideo.videoWidth + "x" + localVideo.videoHeight;
+    closedForm.init(localVideo.videoWidth, localVideo.videoHeight);
+    requestAnimationFrame(closedForm.onObservation);
+  }, true);
 
   if (typeof MediaStreamTrack === 'undefined'){
     alert('This browser does not support MediaStreamTrack.\n\nTry Chrome Canary.');

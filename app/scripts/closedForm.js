@@ -1,5 +1,7 @@
 (function () {
   'use strict';
+  var PHONE_W = 640;
+  var PHONE_H = 360;
   var querySelector = document.querySelector.bind(document);
 
   var degToRad = Math.PI / 180.;
@@ -37,6 +39,8 @@
     ctx.strokeStyle = "rgb(0,255,0)";
     width = w;
     height = h;
+    width = w;
+    height = h;
     img_u8 = new jsfeat.matrix_t(w, h, jsfeat.U8_t | jsfeat.C1_t);
     corners = [];
     var i = w*h;
@@ -52,7 +56,7 @@
     requestAnimationFrame(closedForm.onObservation);
     if (video.readyState === video.HAVE_ENOUGH_DATA) {
       var currentTime = new Date();
-      ctx.drawImage(video, 0, 0, width, height);
+      ctx.drawImage(video, 0, 0, width, height, 0, 0, PHONE_W, PHONE_H);
       var imageData = ctx.getImageData(0, 0, width, height);
       jsfeat.imgproc.grayscale(imageData.data, width, height, img_u8, jsfeat.COLOR_RGBA2GRAY);
       var count = jsfeat.fast_corners.detect(img_u8, corners, 5);
