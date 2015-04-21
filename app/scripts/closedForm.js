@@ -5,12 +5,21 @@
   var querySelector = document.querySelector.bind(document);
 
   var degToRad = Math.PI / 180.;
-  var logger1 = querySelector('#logger1');
   var logger2 = querySelector('#logger2');
+  var logger3 = querySelector('#logger3');
+  var logger4 = querySelector('#logger4');
   var video = querySelector('#local-video');
   var canvas = querySelector('#canvas');
   var minNbFeatures = 3;
   var initialTime;
+
+  var calib = {
+    fx: 0.795574,
+    fy: 1.125149,
+    cx: 0.5,
+    cy: 0.5,
+    skew: 0
+  };
 
   var ImuMeasurements = function (imu) {
     this.acc = [
@@ -26,6 +35,8 @@
 
     this.t = imu.timeStamp;
   };
+
+  ImuMeasurements.prototype.constructor = ImuMeasurements;
 
   var closedForm = {};
 
@@ -63,6 +74,7 @@
 
       if (!count) {
         allObs = [];
+        allImu = [];
         return;
       }
       if (allObs.length === 0) {
@@ -115,8 +127,12 @@
   }
 
   function unproject (ft) {
-    var norm = ft.x + ft.y + 1;
-    return [ ft.x / norm , ft.y / norm , 1 / norm ];
+    var ray = [ (ft.x - calib.cx) * 1/calib.fx,
+                (ft.y - calib.cy) * 1/calib.fy,
+                1 ];
+
+    return numeric.mul(ray,
+                       1/ numeric.norm2(ray));
   }
 
   function syncImuTime (imu, initialTime) {
@@ -125,11 +141,48 @@
     });
   }
 
+  function integrateImuUpToTime (tObs, prevInt) {
+    if (allImu.length == 0) {
+      console.error("no more imu messages to integrate!");
+      return prevInt;
+    }
+
+    var imu;
+    var nextImu;
+    var iM;
+    while (allImu.length > 1 && allImu[1].t < tObs) {
+      var dt = allImu[1].t - allImu[0].t;
+      imu = allImu.shift();
+
+      iM = [ [ 0, -imu.angVel[2], imu.angVel[1] ],
+             [imu.angVel[2], 0, -imu.angVel[0] ],
+             [-imu.angVel[1], imu.angVel[0], 0 ] ];
+
+      iM = numeric.mul(iM, dt);
+
+      prevInt.rotationGyro = numeric.dot(prevInt.rotationGyro,
+                                         numeric.add(
+                                           numeric.identity(3),
+                                           iM));
+
+      var CAdt = numeric.dot(
+        prevInt.rotationGyro,
+        numeric.mul(imu.acc, dt));
+
+      prevInt.CAv = numeric.add(prevInt.CAv, CAdt);
+      prevInt.tCAv = numeric.add(prevInt.tCAv,
+                                 numeric.mul(CAdt, imu.t));
+    }
+
+    return prevInt;
+  }
+
+
   function computeClosedForm(rays, imu) {
     // var nFeatures = rays[0].length;
     // var nObs = rays.length;
     var nFeatures = 3;
-    var nObs = 3;
+    var nObs = Math.min(60, rays.length);
 
 
     var nEquations = 3*(nObs - 1)*nFeatures;
@@ -137,8 +190,16 @@
 
     var Tj, Sj, bv;
 
+
     var leftHandSide = numeric.rep([nEquations, nUnknowns], 0);
     var rightHandSide = numeric.rep([nEquations], 0);
+
+    var imuIntegration = {
+      rotationGyro : numeric.identity(3),
+      CAv : [0,0,0],
+      tCAv : [0,0,0]
+    }
+
 
     var mu1 = numeric.rep([nFeatures*3, nFeatures], 0);
     // build mu1 matrix with all first measurements
@@ -152,7 +213,9 @@
       var obs = rays[iObs];
       var tj = obs.t;
 
-    //   integrateImuUpToTime(initialTime, tj, imuMsgs, rotationGyro, CAv, tCAv);
+
+      imuIntegration = integrateImuUpToTime(tj, imuIntegration);
+
       var rowIdx = 3 * nFeatures * (iObs - 1);
       var colIdx = 6 + nFeatures * iObs;
 
@@ -161,18 +224,23 @@
       /////// Sj submatrix
       Sj = numeric.mul(numeric.identity(3),-tj);
 
-    //   /////// Sv (b vector)
-      // bv = tj * CAv - tCAv;
+      /////// Sv (b vector)
+      bv = numeric.sub(
+        numeric.mul(imuIntegration.CAv, tj),
+        imuIntegration.tCAv);
 
       for (iFeature = 0; iFeature < nFeatures; iFeature++)
       {
         numeric.setBlockOffset(leftHandSide, [rowIdx + iFeature*3, 0], [3, 3], Tj);
         numeric.setBlockOffset(leftHandSide, [rowIdx + iFeature*3, 3], [3, 3], Sj);
-        // b.slice(rowIdx + iFeature*3, 3) = bv;
+        rightHandSide[rowIdx + iFeature*3] = bv[0];
+        rightHandSide[rowIdx + iFeature*3 + 1] = bv[1];
+        rightHandSide[rowIdx + iFeature*3 + 2] = bv[2];
 
         numeric.setBlockOffset(leftHandSide, [rowIdx + iFeature*3, colIdx + iFeature], [3, 1],
-                               // -(rotationGyro * (*bearIt).as_col());
-                               numeric.toRow(obs[iFeature]));
+                               numeric.toRow(
+                                 numeric.neg(numeric.dot(imuIntegration.rotationGyro, obs[iFeature]))
+                               ));
       }
 
 
@@ -188,16 +256,19 @@
                         numeric.mul(numeric.dot(numeric.transpose(svd.U), rightHandSide),
                                     svd.S));
 
+    numeric.prettyPrint(X);
+    logger2.textContent = "speed: "+numeric.norm2(X.slice(0,3));
+    logger3.textContent = "gravity: "+X.slice(3,6);
+    logger4.textContent = ""+X.slice(6,X.length-6);
     return X;
   }
 
   function matchCorners (previousObs, corners, count, currentTime) {
     var lastCorners = previousObs[previousObs.length - 1];
-    var minimumDist = 3;
     var idxMatched = [];
     var newObs = [];
     newObs.t = currentTime;
-    var size = 11;
+    var size = 20;
 
     lastCorners.forEach(function(c, idx) {
       var bestMatch = findClosestCorner(c, corners, count, size);
@@ -275,8 +346,9 @@
 
 
   closedForm.onImu = function(imu) {
+    allImu.push(new ImuMeasurements(imu));
     if (allImu.length < 5000) {
-      allImu.push(new ImuMeasurements(imu));
+      allImu.shift();
     }
   };
   window.closedForm = closedForm;

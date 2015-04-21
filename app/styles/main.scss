@@ -36,14 +36,27 @@ body.open {
 }
 
 #logger1,
-#logger2 {
+#logger2,
+#logger3,
+#logger4 {
   position: absolute;
 }
 #logger1 {
   left: 5px;
 }
-#logger1 {
+#logger2,
+#logger3,
+#logger4 {
   right: 5px;
+}
+#logger2 {
+  top : 0px
+}
+#logger3 {
+  top : 20px
+}
+#logger4 {
+  top : 40px
 }
 
 .app-bar {
